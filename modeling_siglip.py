@@ -38,6 +38,23 @@ class SiglipVisionModel(nn.Module):
         # [Batch_size , channels, height, width] --> [Batch_size, Num_patches, Embd_Dim]
         return self.vision_model(pixel_values = pixel_values)
 
+class SiglipVisionTransformer(nn.Module):
+    def __init__(self, config: SiglipVisionConfig):
+        super().__init__()
+        self.config = config
+        embed_Dim = config.hidden_size 
+
+        self.embeddings = SiglipVisionEmbeddings(config)
+        self.encoder = SiglipEncoder(config)
+        self.post_layernorm = nn.LayerNorm(embed_Dim, eps = config.layer_norm_eps)
+
+    def forward(self, pixel_values):
+        # pixel_values: [Batch_Size, Channels, Height, Width] --> [Batch_Size, Num_Patches, Embed_Dim]
+        hidden_states = self.embeddings(pixel_values)
+        last_hidden_state = self.encoder(inputs_embeds = hidden_states)
+        last_hidden_state = self.post_layernorm(last_hidden_state)
+        return last_hidden_state
+
 class SiglipVisionEmbeddings(nn.Module):
     def __init__(self, config: SiglipVisionConfig):
         super().__init__()
@@ -79,6 +96,15 @@ class SiglipVisionEmbeddings(nn.Module):
         return embeddings # [Batch_size , Num_Patches, embed_Dim]
 
 
+class SiglipMLP(nn.Module):
+    def __init(self, config):
+        super().__init__()
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
+
+    def forward(self, hidden_states):
+        return self.fc2(nn.functional.gelu(self.fc1(hidden_states), approximate="tanh"))
+
 class SiglipEncoder(nn.Module):
     def __init__(self, config: SiglipVisionConfig):
         super().__init__()
@@ -88,26 +114,17 @@ class SiglipEncoder(nn.Module):
         self.mlp = SiglipMLP(config)
         self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
 
-    def forward(self, input_embeds):
-        input_embeds = input_embeds + self.layer_norm1(self.self_attn(input_embeds))
-        input_embeds = input_embeds + self.layer_norm1(self.mlp(input_embeds))
-        return input_embeds
+    def forward(self, hidden_states):
+        residual = hidden_states
+        hidden_states = self.layer_norm1(hidden_states)
+        hidden_states, _ = self.self_attn(hidden_states=hidden_states)
 
-class SiglipVisionTransformer(nn.Module):
-    def __init__(self, config: SiglipVisionConfig):
-        super().__init__()
-        self.config = config
-        embed_Dim = config.hidden_size 
+        hidden_states = residual + hidden_states 
 
-        self.embeddings = SiglipVisionEmbeddings(config)
-        self.encoder = SiglipEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_Dim, eps = config.layer_norm_eps)
+        residual = hidden_states
+        hidden_states = self.layer_norm2(hidden_states)
+        hidden_states = self.mlp(hidden_states)
 
-    def forward(self, pixel_values):
-        # pixel_values: [Batch_Size, Channels, Height, Width] --> [Batch_Size, Num_Patches, Embed_Dim]
-        hidden_states = self.embeddings(pixel_values)
-        last_hidden_state = self.encoder(inputs_embeds = hidden_states)
-        last_hidden_state = self.post_layernorm(last_hidden_state)
-        return last_hidden_state
+        hidden_states = residual + hidden_states 
+        return hidden_states
 
-    
