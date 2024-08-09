@@ -4,9 +4,10 @@ import torch.nn as nn
 
 class SiglipVisionConfig:
     def __init__(
+        self,
         hidden_size = 768,
         intermediate_size = 1072,
-        num_hidden_layer = 12,
+        num_hidden_layers = 12,
         num_attention_heads = 12,
         num_channels = 3,
         image_size = 224,
@@ -19,7 +20,7 @@ class SiglipVisionConfig:
         super().__init__()
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
-        self.num_hidden_layer = num_hidden_layer
+        self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads
         self.num_channels = num_channels
         self.image_size = image_size
@@ -42,11 +43,11 @@ class SiglipVisionTransformer(nn.Module):
     def __init__(self, config: SiglipVisionConfig):
         super().__init__()
         self.config = config
-        embed_Dim = config.hidden_size 
+        embed_dim = config.hidden_size 
 
         self.embeddings = SiglipVisionEmbeddings(config)
         self.encoder = SiglipEncoder(config)
-        self.post_layernorm = nn.LayerNorm(embed_Dim, eps = config.layer_norm_eps)
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps = config.layer_norm_eps)
 
     def forward(self, pixel_values):
         # pixel_values: [Batch_Size, Channels, Height, Width] --> [Batch_Size, Num_Patches, Embed_Dim]
@@ -140,7 +141,7 @@ class SiglipAttention(nn.Module):
         return attn_output, attn_weights
 
 class SiglipMLP(nn.Module):
-    def __init(self, config):
+    def __init__(self, config):
         super().__init__()
         self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size)
         self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size)
