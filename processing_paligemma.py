@@ -17,7 +17,26 @@ def resize(
     resized_image = image.resize(
         (height, width), resample=resample
     )
-    return resample
+    return resized_image
+
+def rescale(
+    image: np.ndarray,
+    scale: float = None, 
+    dtype: np.dtype = np.float32
+) -> np.ndarray:
+    image = image * scale
+    image = image.astype(dtype)
+    return image
+
+def normalize(
+    image: np.ndarray,
+    mean: union[float, Iterable[float]],
+    std: union[float, Iterable[float]],
+) -> np.ndarray:
+    mean = np.array(mean, dtype=image.dtype)
+    std = np.array(std, dtype=image.dtype)
+    image = (image - mean)/std
+    return image
 
 def process_images(
     images: List[Image.Image],
