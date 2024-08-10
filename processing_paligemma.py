@@ -8,30 +8,39 @@ from torch.nn.functional import F
 IMAGENET_STANDARD_MEAN = [0.5, 0.5, 0.5]
 IMAGENET_STANDARD_STD = [0.5, 0.5, 0.5]
 
+def add_image_tokens_to_image(prefix_prompt, bos_token, image_seq_len, image_token):
+    return f"{image_token * image_seq_len}{bos_token}{prefix_prompt}\n"
+
+# bos --> beginning of sentence token
+# prefix_token --> user's prompt
+# image_tokens in PaliGemma = 256
+# \n --> next line token
+
 def resize(
-    image: Image,
-    size: tuple(int, int),
-    resample: Image.Resampling = None,
-)-> np.ndarray:
+    image: Image.Image,
+    size: Tuple[int, int],
+    resample: Optional[Image.Resampling] = None,
+) -> np.ndarray:
     height, width = size
     resized_image = image.resize(
-        (height, width), resample=resample
+        (width, height), resample=resample
     )
-    return resized_image
+    return np.array(resized_image)
 
 def rescale(
     image: np.ndarray,
-    scale: float = None, 
+    scale: Optional[float] = None, 
     dtype: np.dtype = np.float32
 ) -> np.ndarray:
-    image = image * scale
+    if scale is not None:
+        image = image * scale
     image = image.astype(dtype)
     return image
 
 def normalize(
     image: np.ndarray,
-    mean: union[float, Iterable[float]],
-    std: union[float, Iterable[float]],
+    mean: Union[float, Iterable[float]],
+    std: Union[float, Iterable[float]],
 ) -> np.ndarray:
     mean = np.array(mean, dtype=image.dtype)
     std = np.array(std, dtype=image.dtype)
@@ -55,10 +64,12 @@ def process_images(
     images = [np.array(image) for image in images]
 
     # rescale the pixel values to be in the range [0, 1]
-    images = [rescale(image, scale=rescale_factor) for image in images]
+    if rescale_factor is not None:
+        images = [rescale(image, scale=rescale_factor) for image in images]
 
     # Normalize the images to have mean 0 and standard deviation 1
-    images = [normalize(image, mean=image_mean, std=image_std) for image in images]
+    if image_mean is not None and image_std is not None:
+        images = [normalize(image, mean=image_mean, std=image_std) for image in images]
 
     # move the channel dimension to the first dimension
     # model expects the image to have mean 0 and std 1
@@ -68,7 +79,6 @@ def process_images(
 class PaliGemmaProcessor:
 
     IMAGE_TOKEN = "<image>"
-
     def __init__(self, tokenizer, num_image_tokens: int, image_size: int):
         super().__init__()
 
@@ -97,7 +107,7 @@ class PaliGemmaProcessor:
         text: List[str],
         images: List[Image.Image],
         padding: str = "longest",
-        truncation: bool = true,
+        truncation: bool = True,
     ) -> dict:
         assert len(images) == 1 and len(text) == 1, f"Received {len(images)} images for {len(text)} prompts."
 
@@ -135,6 +145,5 @@ class PaliGemmaProcessor:
             truncation=truncation,
         )
 
-        return_date = {"pixel_values": pixel_values, **inputs}
-
-        return return_date
+        return_data = {"pixel_values": pixel_values, **inputs}
+        return return_data
