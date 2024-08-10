@@ -2,8 +2,8 @@ from typing import Dict, List, Optional, Union, Tuple, Iterable
 import numpy as np
 from PIL import Image
 import torch 
-from torch.nn import nn
-from torch.nn.functional import F 
+from torch import nn
+from torch.nn import functional as F 
 
 IMAGENET_STANDARD_MEAN = [0.5, 0.5, 0.5]
 IMAGENET_STANDARD_STD = [0.5, 0.5, 0.5]
