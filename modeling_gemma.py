@@ -13,9 +13,9 @@ class GemmaConfig():
         hidden_size,
         intermediate_size,
         num_hidden_layers,
-        num_attention_heads, # number of heads for query
-        num_key_value_heads, # number of heads for Query and Key
-        head_dim=256,
+        num_attention_heads, # number of heads for Query
+        num_key_value_heads, # number of heads for Value and Key
+        head_dim=256, # how many dimension each head will watch
         max_position_embeddings=8192,
         rms_norm_eps=1e-6,
         rope_theta=10000.0,
@@ -93,6 +93,43 @@ class PaliGemmaForConditionalGeneration(nn.Module):
 
     def tie_weights(self):
         return self.language_model.tie_weights()
+
+    def _merge_input_ids_with_image_features(
+        self,
+        image_features: torch.Tensor,
+        inputs_embeds: torch.Tensor,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        kv_cache: Optional[KVCache] = None,
+    ):
+        _, _, embed_dim = image_features.shape
+        batch_size, sequence_length = input_ids.shape
+        dtype, device = inputs_embeds.dtype, inputs_embeds.device
+
+        # Shape: [Batch_Size, Seq_Len, Hidden_Size]
+        scaled_image_features = image_features / (self.config.hidden_size**0.5)
+    
+        # Combine the embeddings of the image tokens, the text tokens and mask out all the padding tokens.
+        final_embedding = torch.zeros(batch_size, sequence_length, embed_dim, dtype=inputs_embeds.dtype, device=inputs_embeds.device)
+        # Shape: [Batch_Size, Seq_Len]. True for text tokens
+        text_mask = (input_ids != self.config.image_token_index) & (input_ids != self.pad_token_id)
+        # Shape: [Batch_Size, Seq_Len]. True for image tokens
+        image_mask = input_ids == self.config.image_token_index
+        # Shape: [Batch_Size, Seq_Len]. True for padding tokens
+        pad_mask = input_ids == self.pad_token_id
+
+        # We need to expand the masks to the embedding dimension otherwise we can't use them in torch.where
+        text_mask_expanded = text_mask.unsqueeze(-1).expand(-1, -1, embed_dim)
+        pad_mask_expanded = pad_mask.unsqueeze(-1).expand(-1, -1, embed_dim)
+        image_mask_expanded = image_mask.unsqueeze(-1).expand(-1, -1, embed_dim)
+
+        # Add the text embeddings
+        final_embedding = torch.where(text_mask_expanded, inputs_embeds, final_embedding)
+        # Insert image embeddings. We can't use torch.where because the sequence length of scaled_image_features is not equal to the sequence length of the final embedding
+        final_embedding = final_embedding.masked_scatter(image_mask_expanded, scaled_image_features)
+        # Zero out padding tokens
+        final_embedding = torch.where(pad_mask_expanded, torch.zeros_like(final_embedding), final_embedding)
+
 
     def forward(
         self,
