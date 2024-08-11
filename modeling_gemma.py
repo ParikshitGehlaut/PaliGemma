@@ -114,6 +114,72 @@ class PaliGemmaMultiModalProjector(nn.Module):
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.tensor:
     return  hidden_states.repeat_interleave(n_rep, dim=1)
 
+class GemmaRMSNorm(nn.Module):
+    def __init__(self, dim: int, eps: float = 1e-6) -> None:
+        super().__init__()
+        self.eps = eps
+         # gamma parameter
+        self.weights = nn.Parameter(torch.ones(dim)) 
+
+    def _norm(self, x: torch.Tensor):
+        # (B, seq_len, Dim)
+        # rsqrt:  1/ sqrt(x)
+        norm_x = x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+        return norm_x
+
+    def forward(self, x: torch.Tensor):
+        # Apply RMS normalization and scale by the learned weights
+        norm_x = self._norm(x.float()).type_as(x)
+        return self.weights * norm_x
+
+def apply_rotary_pos_emb(q, k, cos, sin, unsqueeze_dim=1):
+    cos = cos.unsqueeze(unsqueeze_dim)
+    sin = sin.unsqueeze(unsqueeze_dim)
+
+    q_embed = (q * cos) + (rotate_half(q) * sin)
+    k_embed = (k * cos) + (rotate_half(k) * sin)
+    return q_embed, k_embed
+
+def rotate_half(x):
+    x1 = x[..., :x.shape[-1] // 2]
+    x2 = x[..., x.shape[-1] // 2:]
+    return torch.cat((-x2, x1), dim = -1)
+
+class GemmaRotaryEmbedding(nn.Module):
+    def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
+        super().__init__()
+        self.dim = dim # it is set to the head_dim
+        self.max_position_embeddings = max_position_embeddings
+        self.base = base # theta
+
+        assert self.dim % 2 == 0, "dimension must be divisible by 2"
+        """
+        Build the theta parameters
+        According to the formula  = 10000 ^ (-2(i-1)/dim) for i = {1, 2, ... dim/2}
+        Shape: (Head_Dim / 2)
+        """
+        theta_numerator = torch.arange(0, head_dim, 2, dtype=torch.int64).float()
+        inv_freq = 1.0 / (self.base ** (theta_numerator / self.dim))
+
+        self.register_buffer("inv_freq", tensor=inv_freq, presistent=False)
+
+    @torch.no_grad()
+    def forward(self, x, position_ids, seq_len=None):
+        self.inv_freq.to(x.device)
+        # [Head_dim // 2] --> [Bsz, Head_dim // 2, 1]
+        inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
+        position_ids_expanded = position_ids[:, None, :].float() # [Bsz, 1, Seq_len]
+
+        with torch.autocast(device_type=device_type, enabled=False):
+            # [Bsz, Head_dim // 2, 1] @ [Bsz, 1, Seq_len] --> [Bsz, Seq_len, Head_dim // 2]
+            freqs = torch.matmul(inv_freq_expanded, position_ids_expanded).transpose(1, 2)
+            # [Bsz, Seq_len, Head_dim // 2] --> [Bsz, Seq_len, Head_dim]
+            emb = torch.cat((freqs, freqs), dim=-1)
+
+            cos = emb.cos()
+            sin = emb.sin()
+        return cos.to(dtype=x.dtype), sin.to(dtype=x.dtype)
+
 class GemmaAttention(nn.Module):
     def __init__(self, config: GemmaConfig, layer_idx: Optional[int] = None):
         super().__init__()
