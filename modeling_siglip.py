@@ -81,7 +81,7 @@ class SiglipVisionEmbeddings(nn.Module):
             persistent=False,
         )
 
-    def forward(self, pixel_values: torch.floatTensor) -> torch.tensor:
+    def forward(self, pixel_values: torch.FloatTensor) -> torch.tensor:
         _, _, height, width = pixel_values.shape # [Batch_size , channels, height, width]
         # [Batch_size , channels, height, width] --> [Batch_size , embed_Dim, Num_Patches_H, Num_Patches_W]
         # Num_Patches_H = height // patch_size

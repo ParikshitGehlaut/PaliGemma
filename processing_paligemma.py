@@ -52,8 +52,8 @@ def process_images(
     size: Dict[str, int] = None,
     resample: Image.Resampling = None,
     rescale_factor: float = None,
-    image_mean: Optional[union[float, List[float]]] = None, 
-    image_std: Optional[union[float, List[float]]] = None, 
+    image_mean: Optional[Union[float, List[float]]] = None, 
+    image_std: Optional[Union[float, List[float]]] = None, 
 ) -> List[np.ndarray]:
     height, width = size[0], size[1]
     images = [
