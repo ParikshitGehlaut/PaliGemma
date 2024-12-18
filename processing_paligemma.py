@@ -128,7 +128,7 @@ class PaliGemmaProcessor:
         # prepend a 'self.image_seq_length' number of image tokens to the prompt
 
         input_strings = [
-            add_image_tokens_to_prompt(
+            add_image_tokens_to_image(
                 prefix_prompt = prompt,
                 bos_token = self.tokenizer.bos_token,
                 image_seq_len = self.image_seq_length,
