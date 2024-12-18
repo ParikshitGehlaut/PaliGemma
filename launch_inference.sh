@@ -1,13 +1,13 @@
 #!/bin/bash
 
-MODEL_PATH="./weights"
-PROMPT="this building is "
-IMAGE_FILE_PATH="test_images/pic1.jpeg"
-MAX_TOKENS_TO_GENERATE=100
-TEMPERATURE=0.8
+MODEL_PATH="/Users/parikshitgehlaut/Documents/Code Playground/pytorch-paligemma/paligemma"
+PROMPT="What is the Name of tower and explain its history "
+IMAGE_FILE_PATH="test_images/pic1.jpg"
+MAX_TOKENS_TO_GENERATE=500
+TEMPERATURE=0.7
 TOP_P=0.9
 DO_SAMPLE="False"
-ONLY_CPU="True"
+ONLY_CPU="False"
 
 python inference.py \
     --model_path "$MODEL_PATH" \
