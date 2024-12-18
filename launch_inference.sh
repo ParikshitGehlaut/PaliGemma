@@ -1,7 +1,7 @@
 #!/bin/bash
 
-MODEL_PATH="/Users/parikshitgehlaut/Documents/Code Playground/pytorch-paligemma/paligemma"
-PROMPT="What is the Name of tower and explain its history "
+MODEL_PATH="./weights"
+PROMPT="The name of the tower is "
 IMAGE_FILE_PATH="test_images/pic1.jpg"
 MAX_TOKENS_TO_GENERATE=500
 TEMPERATURE=0.7
