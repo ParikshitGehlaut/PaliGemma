@@ -1,4 +1,4 @@
-# Paligemma-3B Model
+# PaliGemma
 
 This repository contains the implementation and inference pipeline for the Paligemma-3B model, reproduced using PyTorch. Pre-trained weights of the model are utilized to enable efficient and accurate inference.
 
@@ -18,7 +18,7 @@ This repository contains the implementation and inference pipeline for the Palig
 ---
 
 ## Introduction
-Paligemma-3B is a transformer-based model designed for [specific task/domain description]. This repository provides a PyTorch implementation of the model along with pre-trained weights to facilitate inference.
+Paligemma-3B is a Vision Language Model(VLM) by Google designed for Image-text to text tasks. This repository provides a PyTorch implementation of the model along with pre-trained weights to facilitate inference.
 
 ---
 
@@ -34,14 +34,13 @@ Paligemma-3B is a transformer-based model designed for [specific task/domain des
 
 Before getting started, ensure you have the following:
 
-- Python >= 3.8
+- Python >= 3.10
 - PyTorch >= 2.0
-- Transformers library (if applicable)
-- Additional dependencies listed in `requirements.txt`
+- Additional dependencies listed in `requirement.txt`
 
 Install the required packages with:
 ```bash
-pip install -r requirements.txt
+pip install -r requirement.txt
 ```
 
 ---
@@ -60,22 +59,26 @@ cd PaliGemma
 
 ### Inference
 1. **Download Pre-trained Weights**:
-   Ensure the pre-trained weights for Paligemma-3B are downloaded and placed in the `weights/` directory.
+   Download model weights from [Hugging face](https://huggingface.co/google/paligemma-3b-pt-224) and ensure the pre-trained weights for Paligemma-3B are downloaded and placed in the `weights/` directory.
 
 2. **Run the Inference Script**:
-   Use the provided `inference.py` script to perform inference on your input data.
+   Use the provided `launch_inference.sh` script to perform inference on your input data.
 
    Example:
    ```bash
-   python inference.py --input_file example_input.txt --output_file predictions.txt
+   chmod +x launch_inference.sh
+   ./launch_inference.sh
    ```
 
-   Command-line arguments:
-   - `--input_file`: Path to the input file containing data for inference.
-   - `--output_file`: Path to save the predictions.
-
-3. **View Results**:
-   Predictions will be saved to the specified output file.
+   arguments:
+   - `--model_path`: Path to the pre-trained weights.
+   - `--prompt`: text prompt.
+   - `--image_file_path`: Path to input image.
+   - `--max_tokens_to_generate`: maximun length of text output.
+   - `--temperature`: parameter that controls the randomness of predictions.
+   - `--top_p`: variables used in the decoding strategies.
+   - `--do_sample`: boolean variable.
+   - `--only_cpu`: set to False if GPU is available.
 
 ---
 
@@ -83,19 +86,30 @@ cd PaliGemma
 
 ```
 .
-├── model/                    # PyTorch model implementation
+├── test_images/              # Input image
 ├── weights/                  # Pre-trained weights
 ├── inference.py              # Script for inference
+├── launch_inference.sh       # To run inference
+├── modeling_gemma.py         # PyTorch implementation 
+├── modeling_siglip.py        # PyTorch implementation
+├── processing_paligemma.py   # PyTorch implementation
 ├── requirements.txt          # Python dependencies
 ├── README.md                 # Documentation
-└── examples/                 # Example input/output files
+├── utils.py                  # loading hf model
 ```
 
 ---
 
 ## Acknowledgements
 
-This repository is inspired by the original implementation of Paligemma-3B. Special thanks to [relevant contributors/researchers] for making the pre-trained weights available.
+```
+@article{beyer2024paligemma,
+      title={{PaliGemma: A versatile 3B VLM for transfer}},
+      author={Lucas Beyer and Andreas Steiner and André Susano Pinto and Alexander Kolesnikov and Xiao Wang and Daniel Salz and Maxim Neumann and Ibrahim Alabdulmohsin and Michael Tschannen and Emanuele Bugliarello and Thomas Unterthiner and Daniel Keysers and Skanda Koppula and Fangyu Liu and Adam Grycner and Alexey Gritsenko and Neil Houlsby and Manoj Kumar and Keran Rong and Julian Eisenschlos and Rishabh Kabra and Matthias Bauer and Matko Bošnjak and Xi Chen and Matthias Minderer and Paul Voigtlaender and Ioana Bica and Ivana Balazevic and Joan Puigcerver and Pinelopi Papalampidi and Olivier Henaff and Xi Xiong and Radu Soricut and Jeremiah Harmsen and Xiaohua Zhai},
+      year={2024},
+      journal={arXiv preprint arXiv:2407.07726}
+}
+```
 
 ---
 
